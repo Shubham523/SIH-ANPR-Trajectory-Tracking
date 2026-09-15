@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL with TimescaleDB & PostGIS (High-Performance Time-Series Database)
+  timescaledb:
+    image: timescale/timescaledb-ha:pg16-latest
+    container_name: sih_timescaledb
+    environment:
+      POSTGRES_USER: sih_admin
+      POSTGRES_PASSWORD: sih_secure_password_2026
+      POSTGRES_DB: sih_trajectories
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/home/postgres/pgdata/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    restart: always
+
+  # 2. Redis In-Memory Cache (Active Vehicle Embeddings)
+  redis:
+    image: redis:7-alpine
+    container_name: sih_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  # 3. Apache Kafka (KRaft Mode - High Throughput Message Broker)
+  kafka:
+    image: bashj79/kafka-kraft:latest
+    container_name: sih_kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    restart: always
+
+volumes:
+  timescale_data:
+  redis_data:
+  kafka_data:
