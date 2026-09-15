@@ -39,16 +39,22 @@ if __name__ == "__main__":
 
     # Step 1: Ensure Frontend Production Build Exists
     dist_dir = os.path.join(frontend_dir, "dist")
-    print("[1/2] Building/verifying frontend bundle for single-port deployment...")
-    try:
-        npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
-        res = subprocess.run([npm_cmd, "run", "build"], cwd=frontend_dir, capture_output=True, text=True)
-        if res.returncode == 0:
-            print("      [OK] Frontend assets compiled to dist/")
-        else:
-            print(f"      [WARNING] npm build output: {res.stderr[:200]}")
-    except Exception as e:
-        print(f"      [WARNING] Could not auto-run npm build: {e}")
+    dist_index = os.path.join(dist_dir, "index.html")
+    force_rebuild = "--rebuild" in sys.argv
+
+    if not os.path.exists(dist_index) or force_rebuild:
+        print("[1/2] Building frontend bundle for single-port deployment...")
+        try:
+            npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
+            res = subprocess.run([npm_cmd, "run", "build"], cwd=frontend_dir, capture_output=True, text=True)
+            if res.returncode == 0:
+                print("      [OK] Frontend assets compiled to dist/")
+            else:
+                print(f"      [WARNING] npm build output: {res.stderr[:200]}")
+        except Exception as e:
+            print(f"      [WARNING] Could not auto-run npm build: {e}")
+    else:
+        print("[1/2] Production frontend assets verified (dist/index.html present).")
 
     lan_ip = get_lan_ip()
     local_url = "http://localhost:8000"
@@ -64,6 +70,20 @@ if __name__ == "__main__":
 
     # Start browser opener in background thread
     threading.Thread(target=open_browser_delayed, args=(local_url,), daemon=True).start()
+
+    # Ensure port 8000 is clean if previously hung
+    if sys.platform == "win32":
+        try:
+            out = subprocess.check_output("netstat -ano | findstr :8000", shell=True, text=True)
+            for line in out.strip().split("\n"):
+                parts = line.strip().split()
+                if len(parts) >= 5 and "LISTENING" in parts:
+                    pid = int(parts[-1])
+                    if pid != os.getpid() and pid != 0:
+                        print(f"[Launcher] Clearing stale process {pid} on port 8000...")
+                        subprocess.run(f"taskkill /F /PID {pid}", shell=True, capture_output=True)
+        except Exception:
+            pass
 
     # Run Uvicorn production server on SINGLE PORT 8000
     import uvicorn

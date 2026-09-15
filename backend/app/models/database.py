@@ -13,6 +13,13 @@ def get_connection():
     conn.execute("PRAGMA synchronous=NORMAL;")
     return conn
 
+def _ensure_columns(cursor, table_name: str, column_defs: Dict[str, str]):
+    cursor.execute(f"PRAGMA table_info({table_name});")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    for col_name, col_type in column_defs.items():
+        if col_name not in existing_cols:
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type};")
+
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
@@ -33,6 +40,15 @@ def init_db():
         stream_url TEXT
     );
     """)
+    _ensure_columns(cursor, "cameras", {
+        "area": "TEXT DEFAULT 'Delhi NCR'",
+        "speed_limit": "REAL DEFAULT 60.0",
+        "status": "TEXT DEFAULT 'online'",
+        "fps": "REAL DEFAULT 30.0",
+        "total_hits": "INTEGER DEFAULT 0",
+        "dropped_frames": "INTEGER DEFAULT 0",
+        "stream_url": "TEXT"
+    })
     
     # Blacklist / Hotlist table
     cursor.execute("""
@@ -78,6 +94,14 @@ def init_db():
         reid_vector_json TEXT
     );
     """)
+    _ensure_columns(cursor, "global_vehicles", {
+        "latest_area": "TEXT DEFAULT 'Delhi NCR'",
+        "is_blacklisted": "INTEGER DEFAULT 0",
+        "blacklist_reason": "TEXT",
+        "is_speeding": "INTEGER DEFAULT 0",
+        "top_speed_kmh": "REAL DEFAULT 0.0",
+        "reid_vector_json": "TEXT"
+    })
     
     # Trajectories (Time-Series Table)
     cursor.execute("""
@@ -106,6 +130,15 @@ def init_db():
         FOREIGN KEY (camera_id) REFERENCES cameras(id)
     );
     """)
+    _ensure_columns(cursor, "trajectories", {
+        "area_name": "TEXT DEFAULT 'Delhi NCR'",
+        "speed_from_prev_kmh": "REAL",
+        "speed_limit": "REAL DEFAULT 60.0",
+        "is_speeding": "INTEGER DEFAULT 0",
+        "is_blacklisted": "INTEGER DEFAULT 0",
+        "blacklist_reason": "TEXT",
+        "crop_url": "TEXT"
+    })
     
     # Indices for high-performance spatial & time-window queries
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_trajectories_global_id ON trajectories(global_id);")
