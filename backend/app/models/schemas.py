@@ -5,8 +5,10 @@ import datetime
 class CameraModel(BaseModel):
     id: str
     name: str
+    area: str = "Delhi NCR"
     lat: float
     lon: float
+    speed_limit: float = 60.0
     status: str = "online" # online, offline, degraded
     fps: float = 30.0
     total_hits: int = 0
@@ -30,6 +32,7 @@ class TrajectoryPoint(BaseModel):
     global_id: str
     camera_id: str
     camera_name: str
+    area_name: str = "Delhi NCR"
     lat: float
     lon: float
     timestamp: float
@@ -41,6 +44,10 @@ class TrajectoryPoint(BaseModel):
     match_type: str = "EXACT_PLATE" # EXACT_PLATE, FUZZY_PLATE, REID_FALLBACK, NEW_TRACK
     match_score: float = 1.0
     speed_from_prev_kmh: Optional[float] = None
+    speed_limit: float = 60.0
+    is_speeding: int = 0
+    is_blacklisted: int = 0
+    blacklist_reason: Optional[str] = None
     crop_url: Optional[str] = None
 
 class GlobalVehicle(BaseModel):
@@ -53,6 +60,11 @@ class GlobalVehicle(BaseModel):
     total_detections: int
     latest_camera_id: str
     latest_camera_name: str
+    latest_area: str = "Delhi NCR"
+    is_blacklisted: int = 0
+    blacklist_reason: Optional[str] = None
+    is_speeding: int = 0
+    top_speed_kmh: float = 0.0
     active: bool = True
 
 class TrajectoryResponse(BaseModel):
@@ -63,7 +75,11 @@ class TrajectoryResponse(BaseModel):
     first_seen: float
     last_seen: float
     total_hops: int
+    is_blacklisted: int = 0
+    blacklist_reason: Optional[str] = None
+    top_speed_kmh: float = 0.0
     waypoints: List[TrajectoryPoint]
+
 
 class SearchQuery(BaseModel):
     plate_query: Optional[str] = None

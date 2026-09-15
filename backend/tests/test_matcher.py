@@ -11,9 +11,9 @@ from app.core.trajectory_matcher import (
 class TestTrajectoryMatcher(unittest.TestCase):
     def setUp(self):
         self.matcher = TrajectoryMatchingEngine()
-        self.matcher.register_camera("CAM-N-01", 28.6328, 77.2197, "North Gate")
-        self.matcher.register_camera("CAM-N-02", 28.6310, 77.2160, "Central Blvd")
-        self.matcher.register_camera("CAM-N-04", 28.6250, 77.2180, "South Ave")
+        self.matcher.register_camera("CAM-DEL-01", 28.6315, 77.2197, "CP Radial Road 1", "Connaught Place", 50.0)
+        self.matcher.register_camera("CAM-DEL-02", 28.6335, 77.2165, "CP Outer Circle", "Connaught Place", 50.0)
+        self.matcher.register_camera("CAM-DEL-04", 28.6145, 77.2210, "Kartavya Path", "Central Vista & India Gate", 40.0)
 
     def test_levenshtein_similarity(self):
         self.assertAlmostEqual(levenshtein_similarity("HR-26-DK-9921", "HR26DK9921"), 1.0)
@@ -30,7 +30,7 @@ class TestTrajectoryMatcher(unittest.TestCase):
     def test_exact_plate_matching(self):
         t0 = time.time()
         det1 = {
-            "camera_id": "CAM-N-01",
+            "camera_id": "CAM-DEL-01",
             "timestamp": t0,
             "local_track_id": 101,
             "plate_text": "HR-26-DK-9921",
@@ -40,9 +40,9 @@ class TestTrajectoryMatcher(unittest.TestCase):
         gid1, match_type1, score1, _ = self.matcher.match_detection(det1)
         self.assertEqual(match_type1, "NEW_TRACK")
 
-        # Vehicle moves to CAM-N-02 20 seconds later (speed ~ 74 km/h)
+        # Vehicle moves to CAM-DEL-02 20 seconds later
         det2 = {
-            "camera_id": "CAM-N-02",
+            "camera_id": "CAM-DEL-02",
             "timestamp": t0 + 20,
             "local_track_id": 202,
             "plate_text": "HR-26-DK-9921",
@@ -63,7 +63,7 @@ class TestTrajectoryMatcher(unittest.TestCase):
         v_list = v.tolist()
 
         det1 = {
-            "camera_id": "CAM-N-01",
+            "camera_id": "CAM-DEL-01",
             "timestamp": t0,
             "local_track_id": 11,
             "plate_text": "DL-01-AB-1234",
@@ -74,7 +74,7 @@ class TestTrajectoryMatcher(unittest.TestCase):
 
         # Vehicle at next camera has occluded/unreadable plate, but identical Re-ID embedding 20s later
         det2 = {
-            "camera_id": "CAM-N-02",
+            "camera_id": "CAM-DEL-02",
             "timestamp": t0 + 20,
             "local_track_id": 22,
             "plate_text": None,
@@ -89,7 +89,7 @@ class TestTrajectoryMatcher(unittest.TestCase):
     def test_spatiotemporal_speed_check(self):
         t0 = time.time()
         det1 = {
-            "camera_id": "CAM-N-01",
+            "camera_id": "CAM-DEL-01",
             "timestamp": t0,
             "local_track_id": 33,
             "plate_text": "UP-16-XY-4321",
@@ -98,9 +98,9 @@ class TestTrajectoryMatcher(unittest.TestCase):
         }
         gid1, _, _, _ = self.matcher.match_detection(det1)
 
-        # Physically impossible hop: 1 km distance in 0.1 seconds (>36,000 km/h)
+        # Physically impossible hop: 2 km distance in 0.1 seconds (>72,000 km/h)
         det2 = {
-            "camera_id": "CAM-N-04",
+            "camera_id": "CAM-DEL-04",
             "timestamp": t0 + 0.1,
             "local_track_id": 44,
             "plate_text": "UP-16-XY-4321",
@@ -113,3 +113,4 @@ class TestTrajectoryMatcher(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

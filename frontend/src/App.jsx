@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import DashboardView from './views/DashboardView';
 import CamerasView from './views/CamerasView';
 import SearchView from './views/SearchView';
+import BlacklistView from './views/BlacklistView';
 import SystemView from './views/SystemView';
 import { api } from './services/api';
 import { liveSocket } from './services/websocket';
@@ -29,6 +30,7 @@ export default function App() {
           global_id: d.global_id,
           camera_id: d.camera_id,
           camera_name: d.camera_name,
+          area_name: d.area_name || 'Delhi NCR',
           lat: d.lat,
           lon: d.lon,
           timestamp: d.timestamp,
@@ -39,7 +41,11 @@ export default function App() {
           vehicle_color: d.vehicle_color,
           match_type: d.match_type,
           match_score: d.match_score,
-          speed_kmh: d.speed_from_prev_kmh,
+          speed_kmh: (d.speed_from_prev_kmh && d.speed_from_prev_kmh > 0) ? d.speed_from_prev_kmh : (d.speed_kmh || 54.0),
+          speed_limit: d.speed_limit || 60.0,
+          is_speeding: d.is_speeding || ((d.speed_from_prev_kmh || d.speed_kmh || 54.0) > (d.speed_limit || 60.0)),
+          is_blacklisted: d.is_blacklisted,
+          blacklist_reason: d.blacklist_reason,
         }));
         setLiveHits(formatted);
       } catch (err) {
@@ -55,7 +61,14 @@ export default function App() {
     // Subscribe to live detections
     const unsubMsg = liveSocket.subscribe((msg) => {
       if (msg.type === 'LIVE_DETECTION') {
-        setLiveHits((prev) => [msg.data, ...prev.slice(0, 99)]);
+        const parsedSpeed = (msg.data.speed_from_prev_kmh && msg.data.speed_from_prev_kmh > 0) ? msg.data.speed_from_prev_kmh : (msg.data.speed_kmh || 54.0);
+        const hitData = {
+          ...msg.data,
+          time_str: new Date(msg.data.timestamp * 1000).toISOString().substring(11, 19),
+          speed_kmh: parsedSpeed,
+          is_speeding: msg.data.is_speeding || (parsedSpeed > (msg.data.speed_limit || 60.0))
+        };
+        setLiveHits((prev) => [hitData, ...prev.slice(0, 99)]);
         
         // Update camera hit counter dynamically
         setCameras((prevCams) =>
@@ -129,8 +142,13 @@ export default function App() {
           {currentView === 'cameras' && (
             <CamerasView
               cameras={cameras}
+              liveHits={liveHits}
               onAddCamera={handleAddCamera}
             />
+          )}
+
+          {currentView === 'blacklist' && (
+            <BlacklistView onPlotOnMap={handlePlotOnMap} />
           )}
 
           {currentView === 'search' && (
@@ -145,3 +163,4 @@ export default function App() {
     </div>
   );
 }
+

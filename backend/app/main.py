@@ -6,7 +6,7 @@ from app.config import settings
 from app.models.database import init_db
 from app.core.event_bus import event_bus
 from app.simulator.traffic_simulator import simulator
-from app.routers import cameras, detections, trajectories, system, ws
+from app.routers import cameras, detections, trajectories, system, ws, blacklist
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,8 +49,10 @@ FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 app.include_router(cameras.router, prefix=settings.API_V1_STR)
 app.include_router(detections.router, prefix=settings.API_V1_STR)
 app.include_router(trajectories.router, prefix=settings.API_V1_STR)
+app.include_router(blacklist.router, prefix=settings.API_V1_STR)
 app.include_router(system.router, prefix=settings.API_V1_STR)
 app.include_router(ws.router)
+
 
 # Mount Production Static Files & SPA Fallback
 if os.path.exists(FRONTEND_DIST):

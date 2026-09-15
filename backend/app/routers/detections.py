@@ -18,9 +18,10 @@ def get_recent_detections(limit: int = 50) -> List[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    SELECT id, global_id, camera_id, camera_name, lat, lon, timestamp,
+    SELECT id, global_id, camera_id, camera_name, area_name, lat, lon, timestamp,
            plate_text, plate_confidence, vehicle_type, vehicle_color,
-           match_type, match_score, speed_from_prev_kmh, crop_url
+           match_type, match_score, speed_from_prev_kmh, speed_limit,
+           is_speeding, is_blacklisted, blacklist_reason, crop_url
     FROM trajectories
     ORDER BY timestamp DESC
     LIMIT ?
@@ -28,3 +29,4 @@ def get_recent_detections(limit: int = 50) -> List[Dict[str, Any]]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+

@@ -4,16 +4,22 @@ from app.models.schemas import CameraModel
 from app.models.database import get_connection
 from app.core.trajectory_matcher import matcher
 
+from app.config import settings
+
 router = APIRouter(prefix="/cameras", tags=["Cameras"])
 
 @router.get("", response_model=List[CameraModel])
 def get_all_cameras():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, lat, lon, status, fps, total_hits, dropped_frames, stream_url FROM cameras")
+    cursor.execute("SELECT id, name, area, lat, lon, speed_limit, status, fps, total_hits, dropped_frames, stream_url FROM cameras")
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+@router.get("/areas", summary="Get all physical specified area bounds & metadata")
+def get_all_areas():
+    return settings.AREAS
 
 @router.post("", response_model=CameraModel)
 def add_camera(camera: CameraModel):
@@ -21,15 +27,15 @@ def add_camera(camera: CameraModel):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-        INSERT INTO cameras (id, name, lat, lon, status, fps, total_hits, dropped_frames, stream_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO cameras (id, name, area, lat, lon, speed_limit, status, fps, total_hits, dropped_frames, stream_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            camera.id, camera.name, camera.lat, camera.lon,
-            camera.status, camera.fps, camera.total_hits,
+            camera.id, camera.name, camera.area, camera.lat, camera.lon,
+            camera.speed_limit, camera.status, camera.fps, camera.total_hits,
             camera.dropped_frames, camera.stream_url
         ))
         conn.commit()
-        matcher.register_camera(camera.id, camera.lat, camera.lon, camera.name)
+        matcher.register_camera(camera.id, camera.lat, camera.lon, camera.name, camera.area, camera.speed_limit)
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=400, detail=f"Failed to add camera: {str(e)}")
@@ -52,9 +58,10 @@ def calibrate_camera(camera_id: str, lat: float, lon: float, name: str = None):
     """, (lat, lon, updated_name, camera_id))
     conn.commit()
     
-    matcher.register_camera(camera_id, lat, lon, updated_name)
+    matcher.register_camera(camera_id, lat, lon, updated_name, row["area"], row["speed_limit"])
     
     cursor.execute("SELECT * FROM cameras WHERE id = ?", (camera_id,))
     updated_row = cursor.fetchone()
     conn.close()
     return dict(updated_row)
+

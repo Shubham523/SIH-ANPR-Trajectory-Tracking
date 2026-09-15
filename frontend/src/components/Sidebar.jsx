@@ -1,13 +1,15 @@
 import React from 'react';
-import { Map, Video, Search, Cpu, Play, Square } from 'lucide-react';
+import { Map, Video, Search, ShieldAlert, Cpu, Play, Square } from 'lucide-react';
 
 export default function Sidebar({ currentView, setCurrentView, simulatorRunning, onToggleSimulator, liveHitCount = 0 }) {
   const navItems = [
     { id: 'dashboard', label: 'Live Map Dashboard', icon: Map },
     { id: 'cameras', label: 'Camera Grid Monitor', icon: Video },
+    { id: 'blacklist', label: 'Hotlist / Blacklist', icon: ShieldAlert },
     { id: 'search', label: 'Trajectory Search', icon: Search },
     { id: 'system', label: 'System Health & DevOps', icon: Cpu },
   ];
+
 
   return (
     <aside className="w-64 h-full bg-white border-r border-slate-300 flex flex-col justify-between select-none">

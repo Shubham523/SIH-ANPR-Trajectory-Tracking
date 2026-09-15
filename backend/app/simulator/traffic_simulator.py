@@ -6,51 +6,58 @@ from typing import Dict, List, Any
 from app.core.event_bus import event_bus
 from app.config import settings
 
-# Pre-defined simulation fleet with distinct visual signatures & routes
+# Pre-defined simulation fleet with distinct visual signatures & routes across Delhi NCR areas
 FLEET = [
     {
         "plate": "HR-26-DK-9921",
         "type": "SUV",
         "color": "silver",
-        "route": ["CAM-N-01", "CAM-N-02", "CAM-N-04"],
+        "speed": 52.0,
+        "route": ["CAM-DEL-01", "CAM-DEL-02", "CAM-DEL-09", "CAM-DEL-05"],
         "base_vector_seed": 42
     },
     {
         "plate": "DL-01-AB-1234",
-        "type": "Sedan",
-        "color": "white",
-        "route": ["CAM-N-02", "CAM-N-03", "CAM-N-04"],
+        "type": "SUV",
+        "color": "black",
+        "speed": 58.0,
+        "route": ["CAM-DEL-02", "CAM-DEL-03", "CAM-DEL-04", "CAM-DEL-07"],
         "base_vector_seed": 101
     },
     {
         "plate": "UP-16-XY-4321",
-        "type": "Hatchback",
+        "type": "Sedan",
         "color": "red",
-        "route": ["CAM-N-01", "CAM-N-03", "CAM-N-02"],
+        "speed": 94.0,
+        "route": ["CAM-DEL-05", "CAM-DEL-06", "CAM-DEL-10", "CAM-DEL-09"],
         "base_vector_seed": 202
-    },
-    {
-        "plate": "MH-02-CD-5678",
-        "type": "SUV",
-        "color": "black",
-        "route": ["CAM-N-04", "CAM-N-02", "CAM-N-01"],
-        "base_vector_seed": 303
-    },
-    {
-        "plate": "DL-08-EF-9012",
-        "type": "Bus",
-        "color": "blue",
-        "route": ["CAM-N-03", "CAM-N-01", "CAM-N-02"],
-        "base_vector_seed": 404
     },
     {
         "plate": "KA-03-GH-3456",
         "type": "Cab",
         "color": "yellow",
-        "route": ["CAM-N-01", "CAM-N-04", "CAM-N-03"],
+        "speed": 44.0,
+        "route": ["CAM-DEL-07", "CAM-DEL-08", "CAM-DEL-01", "CAM-DEL-03"],
         "base_vector_seed": 505
+    },
+    {
+        "plate": "MH-02-CD-5678",
+        "type": "Sedan",
+        "color": "blue",
+        "speed": 76.0,
+        "route": ["CAM-DEL-10", "CAM-DEL-09", "CAM-DEL-05", "CAM-DEL-06"],
+        "base_vector_seed": 303
+    },
+    {
+        "plate": "DL-08-EF-9012",
+        "type": "Bus",
+        "color": "red",
+        "speed": 38.0,
+        "route": ["CAM-DEL-03", "CAM-DEL-04", "CAM-DEL-07", "CAM-DEL-08"],
+        "base_vector_seed": 404
     }
 ]
+
 
 def generate_reid_vector(seed: int, noise_scale: float = 0.04) -> List[float]:
     """Generate a consistent 512-dimensional normalized Re-ID embedding with slight lighting variance."""
@@ -115,6 +122,8 @@ class TrafficSimulator:
                         # Generate 512-dim visual embedding
                         reid_vec = generate_reid_vector(v["base_vector_seed"])
 
+                        simulated_speed = round(v.get("speed", 52.0) + random.uniform(-2.5, 2.5), 1)
+
                         payload = {
                             "camera_id": cam_id,
                             "timestamp": now,
@@ -123,6 +132,7 @@ class TrafficSimulator:
                             "vehicle_color": v["color"],
                             "plate_text": reported_plate,
                             "plate_confidence": plate_conf,
+                            "speed_kmh": simulated_speed,
                             "bbox": [random.randint(100, 300), random.randint(200, 400), random.randint(500, 700), random.randint(600, 800)],
                             "reid_embedding": reid_vec
                         }

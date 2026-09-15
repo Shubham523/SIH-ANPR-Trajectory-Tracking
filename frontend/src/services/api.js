@@ -3,10 +3,16 @@ const BASE_URL = typeof window !== 'undefined' && window.location.origin.include
   : '/api';
 
 export const api = {
-  // Cameras
+  // Cameras & Areas
   async getCameras() {
     const res = await fetch(`${BASE_URL}/cameras`);
     if (!res.ok) throw new Error('Failed to fetch cameras');
+    return res.json();
+  },
+
+  async getAreas() {
+    const res = await fetch(`${BASE_URL}/cameras/areas`);
+    if (!res.ok) throw new Error('Failed to fetch areas');
     return res.json();
   },
 
@@ -20,6 +26,31 @@ export const api = {
     return res.json();
   },
 
+  // Blacklist / Hotlist Management
+  async getBlacklist() {
+    const res = await fetch(`${BASE_URL}/blacklist`);
+    if (!res.ok) throw new Error('Failed to fetch blacklist');
+    return res.json();
+  },
+
+  async addToBlacklist({ plate_text, reason, threat_level = 'HIGH' }) {
+    const res = await fetch(`${BASE_URL}/blacklist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plate_text, reason, threat_level }),
+    });
+    if (!res.ok) throw new Error('Failed to add plate to blacklist');
+    return res.json();
+  },
+
+  async removeFromBlacklist(plateText) {
+    const res = await fetch(`${BASE_URL}/blacklist/${encodeURIComponent(plateText)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to remove plate from blacklist');
+    return res.json();
+  },
+
   // Detections
   async getRecentDetections(limit = 50) {
     const res = await fetch(`${BASE_URL}/detections/recent?limit=${limit}`);
@@ -27,12 +58,19 @@ export const api = {
     return res.json();
   },
 
-  // Trajectories
-  async searchTrajectories({ plate, cameraId, vehicleType, limit = 50 } = {}) {
+  // Trajectories & Search
+  async searchTrajectories({ plate, cameraId, area, vehicleType, isBlacklisted, isSpeeding, limit = 50 } = {}) {
     const params = new URLSearchParams();
     if (plate) params.append('plate', plate);
     if (cameraId) params.append('camera_id', cameraId);
+    if (area) params.append('area', area);
     if (vehicleType) params.append('vehicle_type', vehicleType);
+    if (isBlacklisted !== undefined && isBlacklisted !== null && isBlacklisted !== '') {
+      params.append('is_blacklisted', isBlacklisted);
+    }
+    if (isSpeeding !== undefined && isSpeeding !== null && isSpeeding !== '') {
+      params.append('is_speeding', isSpeeding);
+    }
     params.append('limit', limit);
 
     const res = await fetch(`${BASE_URL}/trajectories/search?${params.toString()}`);
@@ -67,3 +105,4 @@ export const api = {
     return res.json();
   }
 };
+
